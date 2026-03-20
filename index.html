@@ -117,6 +117,21 @@
     background: var(--vital-green-dark);
     box-shadow: 0 2px 8px rgba(0,145,11,0.3);
   }
+  .btn-clear {
+    background: white;
+    color: var(--text-secondary);
+    border-color: var(--border-strong);
+  }
+  .btn-clear:hover {
+    background: var(--amber-light);
+    color: var(--amber);
+    border-color: var(--amber);
+  }
+
+  /* Hide spinners on non-margin inputs */
+  input[type="number"].no-spin::-webkit-inner-spin-button,
+  input[type="number"].no-spin::-webkit-outer-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+  input[type="number"].no-spin { -moz-appearance: textfield; }
 
   @media print {
     body { background: white; padding: 12px; }
@@ -281,6 +296,7 @@
     box-shadow: 0 0 0 3px rgba(204,0,0,0.15);
   }
   input[type="number"].pct { width: 76px; }
+  /* Margin inputs (.pct) keep their spinners; no-spin inputs hide them */
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
 
@@ -419,9 +435,13 @@
     <span class="header-subtitle">Proposal Pricing Worksheet &mdash; Public Works</span>
   </div>
   <div class="header-actions">
-    <button class="btn btn-reset" onclick="resetWorksheet()" title="Clear all entries and restore defaults">
+    <button class="btn btn-reset" onclick="resetWorksheet()" title="Clear all fields and reset mix targets to defaults">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
       Reset
+    </button>
+    <button class="btn btn-clear" onclick="clearFields()" title="Clear all fields but keep current mix target settings">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Clear
     </button>
     <button class="btn btn-pdf" onclick="exportPDF()" title="Export worksheet to PDF">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
@@ -480,7 +500,7 @@
 
         <div class="row">
           <span class="row-label">Equipment (anchor)</span>
-          <input type="number" id="m-equip" value="" min="0" step="100" placeholder="0" title="Enter equipment total to drive model">
+          <input type="number" id="m-equip" value="" class="no-spin" min="0" step="100" placeholder="0" title="Enter equipment total to drive model">
         </div>
         <div class="row">
           <span class="row-label">Parts <span style="font-size:11px;color:var(--text-muted)">(derived)</span></span>
@@ -504,7 +524,7 @@
         <div class="row">
           <span class="row-label">Equipment total</span>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-            <input type="number" id="a-equip" value="" min="0" step="100" placeholder="0">
+            <input type="number" id="a-equip" value="" class="no-spin" min="0" step="100" placeholder="0">
             <div class="margin-input-wrap">
               <span class="margin-label-small">margin</span>
               <input type="number" id="a-equip-margin" value="" min="0" max="100" step="0.1" class="pct" placeholder="0" title="Equipment margin %">
@@ -516,7 +536,7 @@
         <div class="row">
           <span class="row-label">Parts total</span>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-            <input type="number" id="a-parts" value="" min="0" step="100" placeholder="0">
+            <input type="number" id="a-parts" value="" class="no-spin" min="0" step="100" placeholder="0">
             <div class="margin-input-wrap">
               <span class="margin-label-small">margin</span>
               <input type="number" id="a-parts-margin" value="" min="0" max="100" step="0.1" class="pct" placeholder="0" title="Parts margin %">
@@ -527,7 +547,7 @@
 
         <div class="row">
           <span class="row-label">Labor total</span>
-          <input type="number" id="a-labor" value="" min="0" step="100" placeholder="0">
+          <input type="number" id="a-labor" value="" class="no-spin" min="0" step="100" placeholder="0">
         </div>
         <div class="sep"></div>
         <div class="row">
@@ -546,12 +566,12 @@
         <span class="row-label">Labor cost / hr. (subcontractor)</span>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:13px;color:var(--text-muted)">$</span>
-          <input type="number" id="labor-rate" value="" min="0" step="0.5" placeholder="0">
+          <input type="number" id="labor-rate" value="" class="no-spin" min="0" step="0.5" placeholder="0">
         </div>
       </div>
       <div class="row">
         <span class="row-label">Estimated hours (subcontractor)</span>
-        <input type="number" id="labor-hours" value="" min="0" step="1" placeholder="0">
+        <input type="number" id="labor-hours" value="" class="no-spin" min="0" step="1" placeholder="0">
       </div>
       <div class="sep"></div>
       <div class="row">
@@ -615,11 +635,17 @@
     else card.classList.add('bad');
   }
 
-  // ---- RESET ----
+  // ---- RESET (clears fields + restores mix targets to defaults) ----
   function resetWorksheet() {
     Object.entries(DEFAULTS.sliders).forEach(([id, v]) => { el(id).value = v; });
     DEFAULTS.inputs.forEach(id => { el(id).value = ''; });
     updateMix();
+  }
+
+  // ---- CLEAR (clears fields only, keeps current mix target settings) ----
+  function clearFields() {
+    DEFAULTS.inputs.forEach(id => { el(id).value = ''; });
+    recalc();
   }
 
   // ---- EXPORT PDF ----

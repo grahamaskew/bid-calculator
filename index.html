@@ -274,7 +274,8 @@
   .row-label.strong { font-weight: 700; color: var(--text-primary); }
 
   /* INPUTS */
-  input[type="number"] {
+  input[type="number"],
+  input[type="text"].currency-input {
     font-family: var(--mono);
     font-size: 13px;
     font-weight: 600;
@@ -288,7 +289,8 @@
     outline: none;
     transition: box-shadow 0.15s;
   }
-  input[type="number"]:focus {
+  input[type="number"]:focus,
+  input[type="text"].currency-input:focus {
     box-shadow: 0 0 0 3px rgba(204,0,0,0.15);
   }
   input[type="number"].pct { width: 76px; }
@@ -496,7 +498,7 @@
 
         <div class="row">
           <span class="row-label">Equipment (anchor)</span>
-          <input type="number" id="m-equip" value="" class="no-spin" min="0" step="100" placeholder="0" title="Enter equipment total to drive model">
+          <input type="text" id="m-equip" value="" class="no-spin currency-input" inputmode="numeric" placeholder="0" title="Enter equipment total to drive model">
         </div>
         <div class="row">
           <span class="row-label">Parts <span style="font-size:11px;color:var(--text-muted)">(derived)</span></span>
@@ -520,7 +522,7 @@
         <div class="row">
           <span class="row-label">Equipment total</span>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-            <input type="number" id="a-equip" value="" class="no-spin" min="0" step="100" placeholder="0">
+            <input type="text" id="a-equip" value="" class="no-spin currency-input" inputmode="numeric" placeholder="0">
             <div class="margin-input-wrap">
               <span class="margin-label-small">margin</span>
               <input type="number" id="a-equip-margin" value="" min="0" max="100" step="0.1" class="pct" placeholder="0" title="Equipment margin %">
@@ -532,7 +534,7 @@
         <div class="row">
           <span class="row-label">Parts total</span>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-            <input type="number" id="a-parts" value="" class="no-spin" min="0" step="100" placeholder="0">
+            <input type="text" id="a-parts" value="" class="no-spin currency-input" inputmode="numeric" placeholder="0">
             <div class="margin-input-wrap">
               <span class="margin-label-small">margin</span>
               <input type="number" id="a-parts-margin" value="" min="0" max="100" step="0.1" class="pct" placeholder="0" title="Parts margin %">
@@ -543,7 +545,7 @@
 
         <div class="row">
           <span class="row-label">Labor total</span>
-          <input type="number" id="a-labor" value="" class="no-spin" min="0" step="100" placeholder="0">
+          <input type="text" id="a-labor" value="" class="no-spin currency-input" inputmode="numeric" placeholder="0">
         </div>
         <div class="sep"></div>
         <div class="row">
@@ -620,7 +622,8 @@
   const fmt$ = v => isNaN(v)||!isFinite(v) ? '\u2014' : '$' + Math.round(v).toLocaleString();
   const fmtPct = v => isNaN(v)||!isFinite(v) ? '\u2014' : (v*100).toFixed(1) + '%';
   const el = id => document.getElementById(id);
-  const val = id => { const v = parseFloat(el(id).value); return isNaN(v) ? 0 : v; };
+  const rawVal = id => { const v = parseFloat(el(id).value.replace(/,/g, '')); return isNaN(v) ? 0 : v; };
+  const val = id => rawVal(id);
 
   function colorMetric(cardId, value, thresholds) {
     const card = el(cardId);
@@ -745,6 +748,38 @@
   ['m-equip','a-equip','a-equip-margin','a-parts','a-parts-margin','a-labor',
    'labor-rate','labor-hours'].forEach(id => {
     el(id).addEventListener('input', recalc);
+  });
+
+
+  // ---- CURRENCY INPUT FORMATTING ----
+  const CURRENCY_IDS = ['m-equip', 'a-equip', 'a-parts', 'a-labor'];
+
+  function formatCurrency(input) {
+    const raw = input.value.replace(/,/g, '');
+    if (raw === '' || raw === '-') return;
+    const num = parseFloat(raw);
+    if (isNaN(num)) { input.value = ''; return; }
+    // Format with commas, no decimals
+    input.value = Math.floor(num).toLocaleString('en-US');
+  }
+
+  function unformatCurrency(input) {
+    // Strip commas on focus so user can edit freely
+    input.value = input.value.replace(/,/g, '');
+  }
+
+  CURRENCY_IDS.forEach(id => {
+    const input = el(id);
+    input.addEventListener('focus', () => unformatCurrency(input));
+    input.addEventListener('blur', () => { formatCurrency(input); recalc(); });
+    input.addEventListener('keydown', e => {
+      // Allow: digits, backspace, delete, tab, enter, arrows, home, end
+      const allowed = ['Backspace','Delete','Tab','Enter','ArrowLeft','ArrowRight','Home','End'];
+      if (allowed.includes(e.key)) return;
+      if (e.key >= '0' && e.key <= '9') return;
+      // Block everything else (letters, symbols, dots)
+      e.preventDefault();
+    });
   });
 
   updateMix();
